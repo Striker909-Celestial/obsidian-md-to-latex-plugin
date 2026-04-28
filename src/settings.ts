@@ -1,4 +1,4 @@
-import {App, PluginSettingTab, Setting} from "obsidian";
+import {App, Notice, PluginSettingTab, Setting} from "obsidian";
 import MDtoTEXPlugin from "./main";
 
 export interface MDtoTEXSettings {
@@ -9,7 +9,7 @@ export interface MDtoTEXSettings {
 
 	table_of_contents: boolean;
 	number_headings: boolean;
-	used_headings: Map<string, boolean>;
+	used_headings: string[];
 }
 
 export const DEFAULT_SETTINGS: MDtoTEXSettings = {
@@ -26,15 +26,11 @@ export const DEFAULT_SETTINGS: MDtoTEXSettings = {
 
 	table_of_contents: false,
 	number_headings: true,
-	used_headings: new Map([
-		["part", false],
-		["chapter", false],
-		["section", true],
-		["subsection", true],
-		["subsubsection", true],
-		["paragraph", false],
-		["subparagraph", false],
-	])
+	used_headings: [
+		"section",
+		"subsection",
+		"subsubsection"
+	],
 }
 
 export class MDtoTEXSettingTab extends PluginSettingTab {
@@ -55,7 +51,7 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Document class')
 			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			.setDesc('Class of document to generate (e.g. article, report, etc.)')
+			.setDesc('Class of document to generate')
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption('article', 'Article')
@@ -90,25 +86,30 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Paper size')
 			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			.setDesc('Size of the paper (e.g. letterpaper, a4paper, legalpaper)')
-			.addText(text => text
-				.setPlaceholder('Enter paper size')
-				.setValue(this.plugin.settings.paper_size)
-				.onChange(async (value) => {
-					this.plugin.settings.paper_size = value;
-					await this.plugin.saveSettings();
-				}));
+			.setDesc('Size of the paper')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('letterpaper', 'Letter')
+					.addOption('a4paper', 'A4')
+					.addOption('legalpaper', 'Legal')
+					.setValue(this.plugin.settings.paper_size)
+					.onChange(async (value) => {
+						this.plugin.settings.paper_size = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName('Packages')
 			.setDesc('Packages for LaTeX to import')
-			.addText(text => text
+			.addTextArea(text => text
 				.setPlaceholder('Enter package names, separated by commas')
-				.setValue(this.plugin.settings.packages.join(', '))
+				.setValue(this.plugin.settings.packages.join(",\n"))
 				.onChange(async (value) => {
-					this.plugin.settings.packages = value.split(',').map(s => s.trim());
+					this.plugin.settings.packages = value.split(",").map(s => s.trim());
 					await this.plugin.saveSettings();
-				}));
+				})
+			);
 
 		new Setting(containerEl).setName("Body").setHeading();
 
@@ -135,79 +136,14 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Use parts')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("part") == true)
+			.setName('Enabled headings')
+			.setDesc('A list of all heading types to use in order of highest to lowest')
+			.addTextArea(text => text
+				.setPlaceholder('Enter heading types, separated by commas')
+				.setValue(this.plugin.settings.used_headings.join(",\n"))
 				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("part", value);
+					this.plugin.settings.used_headings = value.split(",").map(s => s.trim());
 					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use chapters')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("chapter") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("chapter", value);
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use sections')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("section") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("section", value);
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use subsections')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("subsection") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("subsection", value);
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use subsubsections')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("subsubsection") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("subsubsection", value);
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use paragraphs')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("paragraph") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("paragraph", value);
-					await this.plugin.saveSettings();
-					this.display();
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Use subparagraphs')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.used_headings.get("subparagraph") == true)
-				.onChange(async (value) => {
-					this.plugin.settings.used_headings.set("subparagraph", value);
-					await this.plugin.saveSettings();
-					this.display();
 				})
 			);
 	}

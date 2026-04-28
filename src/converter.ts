@@ -1,5 +1,6 @@
 import {MDtoTEXSettings} from "./settings";
 import MDtoTEXPlugin from "./main";
+import {Notice} from "obsidian";
 /** Uses a plugin to read the .md file from a specified path as an array of lines.
  * @param plugin The plugin to use
  * @param md_path The path to the .md file
@@ -7,6 +8,9 @@ import MDtoTEXPlugin from "./main";
  * */
 async function readMD(plugin: MDtoTEXPlugin, md_path: string): Promise<string[]> {
 	const file = plugin.app.vault.getFileByPath(md_path);
+	if (file?.extension != "md") {
+		return [];
+	}
 	const text: string = await plugin.app.vault.read(file!);
 	return text.split("\n");
 }
@@ -16,6 +20,9 @@ async function readMD(plugin: MDtoTEXPlugin, md_path: string): Promise<string[]>
  * */
 async function readCurrentMD(plugin: MDtoTEXPlugin): Promise<string[]> {
 	const file = plugin.app.workspace.getActiveFile();
+	if (file?.extension != "md") {
+		return [];
+	}
 	const text: string = await plugin.app.vault.read(file!);
 	return text.split("\n");
 }
@@ -51,13 +58,15 @@ const date = new RegExp(/#Date:?\s(.*)/);
 function makeTitle(title: string, lines: string[]): string[] {
 	let title_section: string[] = ["% Title"];
 	title_section.push(`\\title{${title}}`);
+	let lines_to_remove: string[] = [];
 	for (const line of lines) {
 		if (author.test(line)) {
 			title_section.push(`\\author{${author.exec(line)![1]}}`);
-			lines.remove(line);
+			lines_to_remove.push(line);
+			continue;
 		}
 		if (date.test(line)) {
-			lines.remove(line);
+			lines_to_remove.push(line);
 			let _date = date.exec(line)![1];
 			if (_date == "today" || _date == "Today") {
 				_date = "\\today";
@@ -66,6 +75,9 @@ function makeTitle(title: string, lines: string[]): string[] {
 		}
 	}
 	title_section.push("");
+	for (const line of lines_to_remove) {
+		lines.remove(line);
+	}
 	return title_section;
 }
 
@@ -90,13 +102,10 @@ function initHeadings(settings: MDtoTEXSettings, lines: string[]): void {
 		}
 	}
 	hash_nums.sort((a, b) => a - b);
-	let i: number = 0;
-	for (const heading of settings.used_headings.keys()) {
-		if (settings.used_headings.get(heading) == true) {
-			headings.set(Number(hash_nums[i]), heading);
-			i++;
-			if (i >= hash_nums.length) { break; }
-		}
+	let i: number;
+	for (i = 0; i < settings.used_headings.length; i++) {
+		headings.set(Number(hash_nums[i]), settings.used_headings[i]!);
+		if (i >= hash_nums.length) { break; }
 	}
 	while (i < hash_nums.length) {
 		headings.set(Number(hash_nums[i]), "text");
@@ -196,6 +205,7 @@ export async function MDtoTEX(plugin: MDtoTEXPlugin, settings: MDtoTEXSettings, 
  * @return If the write operation was successful*/
 export async function currentMDtoTEX(plugin: MDtoTEXPlugin, settings: MDtoTEXSettings): Promise<boolean> {
 	const lines: string[] = await readCurrentMD(plugin);
+	if (lines.length == 0) { return false; }
 	const md_path = plugin.app.workspace.getActiveFile()!.path;
 	const path: string = md_path.substring(0, md_path.length - 3) + ".tex";
 	return writeTEX(plugin, settings, path, lines);

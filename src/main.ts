@@ -6,6 +6,7 @@ export default class MDtoTEXPlugin extends Plugin {
 	settings: MDtoTEXSettings;
 
 	async onload() {
+		this.registerExtensions(["tex"], "markdown");
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
