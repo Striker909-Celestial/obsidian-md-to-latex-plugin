@@ -1,26 +1,23 @@
 import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import {DEFAULT_SETTINGS, MDtoTEXSettings, MDtoTEXSettingTab} from "./settings";
+import {currentMDtoTEX, MDtoTEX} from "./converter";
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class MDtoTEXPlugin extends Plugin {
+	settings: MDtoTEXSettings;
 
 	async onload() {
 		await this.loadSettings();
 
 		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
+		this.addRibbonIcon('pdf-file', 'Convert to LaTeX', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
+			new Notice(`Convert to LaTeX: Converting current file into a .tex file`)
+			new Notice(`Convert to LaTeX: ${await currentMDtoTEX(this, this.settings) ? "Success" : "Encountered an Error"}`)
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
 		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
+		/*this.addCommand({
 			id: 'open-modal-simple',
 			name: 'Open modal (simple)',
 			callback: () => {
@@ -54,19 +51,10 @@ export default class MyPlugin extends Plugin {
 				}
 				return false;
 			}
-		});
+		});*/
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addSettingTab(new MDtoTEXSettingTab(this.app, this));
 
 	}
 
@@ -74,7 +62,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MDtoTEXSettings>);
 	}
 
 	async saveSettings() {
@@ -82,7 +70,7 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
+/*class SampleModal extends Modal {
 	constructor(app: App) {
 		super(app);
 	}
@@ -96,4 +84,4 @@ class SampleModal extends Modal {
 		const {contentEl} = this;
 		contentEl.empty();
 	}
-}
+}*/
