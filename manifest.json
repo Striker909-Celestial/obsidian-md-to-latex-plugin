@@ -1,9 +1,9 @@
 {
 	"id": "obsidian-md-to-tex-plugin",
 	"name": "Convert to LaTeX",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Adds the ability to convert .md files to .tex files to produce simple LaTeX documents.",
+	"description": "Adds the ability to convert .md files to .tex files and PDFs to produce simple LaTeX documents.",
 	"author": "Striker-909",
 	"authorUrl": "https://github.com/Striker909-Celestial",
 	"isDesktopOnly": true

@@ -5,14 +5,16 @@ export class Tag {
 	public static readonly HEADER: Tag = new Tag("HEADER");
 	public static readonly BODY: Tag = new Tag("BODY");
 	public static readonly BLOCK: Tag = new Tag("BLOCK");
-	public static readonly LINE_BLOCK: Tag = new Tag("LINE_BLOCK");
+	public static readonly INDENT_BLOCK: Tag = new Tag("LINE_BLOCK");
+	public static readonly TABLE: Tag = new Tag("TABLE");
 	public static readonly INLINE_MODIFICATION: Tag = new Tag("INLINE_MODIFICATION");
 
 	public static header(level: number): Tag { return new Tag("HEADER", new HashSet<Tag>(Tag.hash_code), Tag.HEADER, new Map<string, any>([["level", level]])); }
 	public static body(): Tag { return this.BODY; }
 	public static block(): Tag { return this.BLOCK; }
-	public static lineBlock(indent: number, keyword: string): Tag { return new Tag("LINE_BLOCK", new HashSet<Tag>(Tag.hash_code), Tag.LINE_BLOCK,
+	public static indentBlock(indent: number, keyword: string): Tag { return new Tag("INDENT_BLOCK", new HashSet<Tag>(Tag.hash_code), Tag.INDENT_BLOCK,
 		new Map<string, any>([["indent", indent], ["keyword", keyword]])); }
+	public static table(): Tag { return this.TABLE; }
 	public static inlineModification(): Tag { return this.INLINE_MODIFICATION; }
 
 	private constructor(
@@ -37,8 +39,10 @@ export class Tag {
 
 Tag.HEADER.excludes.add(Tag.BODY);
 Tag.BODY.excludes.add(Tag.HEADER);
-Tag.LINE_BLOCK.excludes.addAll(Tag.BODY.excludes.values());
-Tag.BLOCK.excludes.addAll([Tag.LINE_BLOCK, Tag.INLINE_MODIFICATION]);
+Tag.INDENT_BLOCK.excludes.addAll(Tag.BODY.excludes.values());
+Tag.TABLE.excludes.addAll([Tag.INDENT_BLOCK, Tag.BLOCK])
+Tag.TABLE.excludes.addAll(Tag.BODY.excludes.values());
+Tag.BLOCK.excludes.addAll([Tag.INDENT_BLOCK, Tag.INLINE_MODIFICATION]);
 Tag.BLOCK.excludes.addAll(Tag.BODY.excludes.values());
 
 export class Line {

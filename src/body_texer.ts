@@ -29,6 +29,9 @@ export class InlineModificationTexer {
 			return "\\url{" + p1 + "}";
 		});
 
+	public static readonly HORIZONTAL_LINE: InlineModificationTexer = new InlineModificationTexer(/^([-_*])\1\1+$/,
+		() => "\\noindent\\rule{\\textwidth}{0.3pt}")
+
 	public static readonly BOLD: InlineModificationTexer = new InlineModificationTexer(/(\*\*|__)([^*]*)\1/,
 		(match, p1, p2) => "\\textbf{" + InlineModificationTexer.REPLACE_SPECIAL_CHARS.apply(p2) + "}");
 	public static readonly ITALIC: InlineModificationTexer = new InlineModificationTexer(/\*([^*]*)\*/,
@@ -57,11 +60,13 @@ export class InlineModificationTexer {
 	public static apply(text: string|Line|Line[], texers: InlineModificationTexer[] = [
 		InlineModificationTexer.FORMATTED_URL,
 		InlineModificationTexer.RAW_URL,
+		InlineModificationTexer.HORIZONTAL_LINE,
 		InlineModificationTexer.BOLD,
 		InlineModificationTexer.ITALIC,
 		InlineModificationTexer.STRIKETHROUGH,
 		InlineModificationTexer.HIGHLIGHT,
-		InlineModificationTexer.TYPEWRITER]): string|Line|Line[] {
+		InlineModificationTexer.TYPEWRITER
+	]): string|Line|Line[] {
 		if (text instanceof Line) {
 			text.conditionalModification(Tag.INLINE_MODIFICATION, (text) => InlineModificationTexer.apply(text, texers));
 			return text;
@@ -79,21 +84,21 @@ export class InlineModificationTexer {
 	}
 }
 
-export class LineBlockTexer {
+export class IndentedBlockTexer {
 
-	public static readonly ITEMIZE = new LineBlockTexer(
+	public static readonly ITEMIZE = new IndentedBlockTexer(
 		"itemize",
 		/^(\s*)[-*] (.*)$/,
 		(match, p1, p2) => "\\item " + p2, 
 		(match) => (match != undefined) ? match[1]!.length : 0
 	);
-	public static readonly ENUMERATE = new LineBlockTexer(
+	public static readonly ENUMERATE = new IndentedBlockTexer(
 		"enumerate",
 		/^(\s*)\d[.)] (.*)$/,
 		(match, p1, p2) => "\\item " + p2,
 		(match) => (match != undefined) ? match[1]!.length : 0
 	);
-	public static readonly BLOCKQUOTE = new LineBlockTexer(
+	public static readonly BLOCKQUOTE = new IndentedBlockTexer(
 		"displayquote",
 		/^((?:>\s)+)(.*)$/,
 		(match, p1, p2) => p2,
@@ -113,22 +118,22 @@ export class LineBlockTexer {
 		const match = this.regex.exec(line.getText());
 		if (!match) { return line; }
 		const indent = this.indentFunc(match);
-		const tag = Tag.lineBlock(indent, this.keyword)
+		const tag = Tag.indentBlock(indent, this.keyword)
 		// Store the raw indent width in the tag; it is normalized to a nesting
 		// level (and re-indented) in the array pass of the static apply().
 		line.conditionalModification(tag, (text) => text.replace(this.regex, this.replaceFunc));
 		return line;
 	}
 
-	public static apply(line: Line, texers: LineBlockTexer[]): Line;
-	public static apply(lines: Line[], texers: LineBlockTexer[]): Line[];
+	public static apply(line: Line, texers: IndentedBlockTexer[]): Line;
+	public static apply(lines: Line[], texers: IndentedBlockTexer[]): Line[];
 	public static apply(line: Line): Line;
 	public static apply(lines: Line[]): Line[];
 
-	public static apply(line: Line|Line[], texers: LineBlockTexer[] = [
-		LineBlockTexer.ITEMIZE,
-		LineBlockTexer.ENUMERATE,
-		LineBlockTexer.BLOCKQUOTE
+	public static apply(line: Line|Line[], texers: IndentedBlockTexer[] = [
+		IndentedBlockTexer.ITEMIZE,
+		IndentedBlockTexer.ENUMERATE,
+		IndentedBlockTexer.BLOCKQUOTE
 	]): Line|Line[] {
 		if (line instanceof Line) {
 			for (const lineBlock of texers) {
@@ -147,14 +152,14 @@ export class LineBlockTexer {
 			// Close environments until only `need` remain open.
 			const close = (need: number) => {
 				for (; open > need; open--) {
-					output.push(new Line("\t".repeat(open - 1) + "\\end{" + currentKeyword + "}", [Tag.LINE_BLOCK]));
+					output.push(new Line("\t".repeat(open - 1) + "\\end{" + currentKeyword + "}", [Tag.INDENT_BLOCK]));
 				}
 				if (need == 0) { currentKeyword = ""; }
 			}
 			// Open environments until `need` are open.
 			const openTo = (need: number) => {
 				for (; open < need; open++) {
-					output.push(new Line("\t".repeat(open) + "\\begin{" + currentKeyword + "}", [Tag.LINE_BLOCK]));
+					output.push(new Line("\t".repeat(open) + "\\begin{" + currentKeyword + "}", [Tag.INDENT_BLOCK]));
 				}
 			}
 			const go = (need: number) => {
@@ -177,14 +182,14 @@ export class LineBlockTexer {
 				return indentStack.length - 1;
 			}
 			for (var i = 0; i < line.length; i++) {
-				const currentLine = LineBlockTexer.apply(line[i]!, texers);
-				if (!currentLine.tags.contains(Tag.LINE_BLOCK)) {
+				const currentLine = IndentedBlockTexer.apply(line[i]!, texers);
+				if (!currentLine.tags.contains(Tag.INDENT_BLOCK)) {
 					reset();
 					output.push(currentLine);
 					continue;
 				}
 
-				const tag = currentLine.tags.get(Tag.LINE_BLOCK)!;
+				const tag = currentLine.tags.get(Tag.INDENT_BLOCK)!;
 				const indent = tag.data.get("indent") as number;
 				const keyword = tag.data.get("keyword") as string;
 
@@ -204,6 +209,73 @@ export class LineBlockTexer {
 		}
 		return line;
 	}
+}
+
+export class TableTexer {
+
+	private static row_regex = /^(?:\|([^|]+))+\|$/;
+	private static row_replace = (match: string) => {
+		var out = "";
+		const groups = match.split("|")
+		for (var i = 1; i < groups.length - 1; i++) {
+			if (i > 1) out += " & ";
+			 out += groups[i];
+		}
+		return "\t" + out + "\\\\";
+	};
+	private static alignment_regex = /^(?:\|\s*(:?-+:?)\s*)+\|$/;
+	private static center_align_regex = /\s*:-+:\s*/;
+	private static right_align_regex = /\s*-+:\s*/;
+
+	private constructor() {}
+
+	public static apply(lines: Line[]): Line[] {
+		var out: Line[] = [];
+		var table: boolean = false;
+		var table_begin = -1;
+		var alignments: string[] = []
+		var alignmentReplace = (match: string) => {
+			if (alignments.length > 0) { return "\\hline"; }
+			const groups = match.split("|")
+			for (var i = 1; i < groups.length - 1; i++) {
+				if (TableTexer.center_align_regex.test(groups[i]!)) { alignments.push("c"); }
+				else if (TableTexer.right_align_regex.test(groups[i]!)) { alignments.push("r"); }
+				else { alignments.push("l"); }
+			}
+			return "\\hline";
+		}
+
+		for (const line of lines) {
+			if (!TableTexer.row_regex.test(line.getText())) {
+				if (table) {
+					out.push(new Line("\\hline", [Tag.TABLE]));
+					out.push(new Line("\\end{tabular}", [Tag.TABLE]));
+					alignments = [];
+					table = false;
+				}
+				out.push(line);
+				continue;
+			}
+			if (!table) {
+				table = true;
+				table_begin = out.length;
+				out.push(new Line(""));
+				out.push(new Line("\\hline", [Tag.TABLE]));
+			}
+			if (TableTexer.alignment_regex.test(line.getText())) {
+				line.conditionalModification(Tag.TABLE, (text) => text.replace(TableTexer.alignment_regex, alignmentReplace))
+				out.push(line);
+				const alignmentsBlock = alignments.join("|")
+				out[table_begin]!.conditionalModification(Tag.TABLE, (text) => "\\begin{tabular}{ |" + alignmentsBlock + "| }");
+				continue;
+			}
+			line.conditionalModification(Tag.TABLE, (text) => text.replace(TableTexer.row_regex, TableTexer.row_replace));
+			out.push(line);
+		}
+
+		return out;
+	}
+
 }
 
 export class BlockTexer {
@@ -265,9 +337,10 @@ export function tag_headers(lines: Line[], header_regex: RegExp = /(#{1,6}) (.*)
 }
 
 export function body_texer(body: Line[], texer_funcs: ((lines: Line[]) => Line[])[] = [
+	TableTexer.apply,
 	BlockTexer.apply,
 	tag_headers,
-	LineBlockTexer.apply,
+	IndentedBlockTexer.apply,
 	InlineModificationTexer.apply
 ]): Line[] {
 	for (const texer of texer_funcs) {
