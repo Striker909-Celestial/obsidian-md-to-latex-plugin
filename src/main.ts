@@ -1,9 +1,90 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
+import {FileSystemAdapter, getFrontMatterInfo, Notice, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
 import {DEFAULT_SETTINGS, MDtoTEXSettings, MDtoTEXSettingTab} from "./settings";
-import {currentMDtoTEX, MDtoTEX} from "./converter";
+import {Document} from "./document_texer"
+import {execSync} from "node:child_process";
 
 export default class MDtoTEXPlugin extends Plugin {
 	settings: MDtoTEXSettings;
+
+	async separateContent(file: TFile) {
+		const fileContents = await this.app.vault.read(file);
+
+		const { contentStart, exists } = getFrontMatterInfo(fileContents);
+
+		const bodyOnly = fileContents.slice(contentStart);
+
+		const fileCache = this.app.metadataCache.getFileCache(file);
+		const frontMatter = fileCache?.frontmatter || {};
+		const properties = new Map<string, any>();
+
+		for (const [key, value] of Object.entries(frontMatter)) { properties.set(key, value); }
+
+		return {
+			properties: properties,
+			body: bodyOnly
+		};
+	}
+
+	async buildDocument(file: TFile) {
+		const { properties, body } = await this.separateContent(file);
+		const title: string = file.basename;
+		try {
+			return new Document(title, body, properties, this.settings);
+		} catch (e) {
+			new Notice(`Error while building document: ${e}`)
+			throw Error(`Error while building document: ${e}`)
+		}
+	}
+
+	getCurrentFile() {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice("No active file");
+			throw new Error("No active file");
+		}
+		return activeFile;
+	}
+
+	private getOutputFolderPath(title: string): string { return this.settings.output_folder.replace("{FILENAME}", title); }
+
+	async writeDocumentToFile(document: Document) {
+		const outputFolderPath = this.getOutputFolderPath(document.title);
+		try {
+			await this.app.vault.createFolder(outputFolderPath);
+		} catch (e) {
+			const tex = this.app.vault.getAbstractFileByPath(outputFolderPath + "/" + document.title + ".tex");
+			if (tex instanceof TAbstractFile) {
+				await this.app.vault.delete(tex)
+			}
+		}
+		try {
+			return this.app.vault.create(outputFolderPath + "/" + document.title + ".tex", document.latex_text);
+		} catch (e) {
+			new Notice("Failed to write file: " + outputFolderPath + "/" + document.title + ".tex\nError message: " + e);
+			throw Error("Failed to write file: " + outputFolderPath + "/" + document.title + ".tex\nError message: " + e);
+		}
+	}
+
+	private getPDFConversionCommand(file: TFile): string {
+		var root = "";
+		const adapter = this.app.vault.adapter;
+		if (adapter instanceof FileSystemAdapter) {
+			root = adapter.getBasePath();
+		}
+		const filePath = "\"" + root + "/" + file.path + "\"";
+		const outputFolderPath = "\"" + root + "/" + this.getOutputFolderPath(file.basename) + "\"";
+		return this.settings.pdf_conversion_command.replace("{FILE_PATH}", filePath).replace("{OUTPUT_FOLDER_PATH}", outputFolderPath);
+	}
+
+	private convertFileToPDF(file: TFile) {
+		const command = this.getPDFConversionCommand(file);
+		try {
+			execSync(command);
+		} catch (e) {
+			new Notice(`Failed to convert file to PDF: ${e}`);
+			throw Error(`Failed to convert file to PDF: ${e}`)
+		}
+	}
 
 	async onload() {
 		this.registerExtensions(["tex"], "markdown");
@@ -13,8 +94,26 @@ export default class MDtoTEXPlugin extends Plugin {
 		this.addRibbonIcon('pdf-file', 'Convert to LaTeX', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
 			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice(`Convert to LaTeX: Converting current file into a .tex file`)
-			new Notice(`Convert to LaTeX: ${await currentMDtoTEX(this, this.settings) ? "Success" : "Encountered an Error"}`)
+			new Notice(`Convert to LaTeX: Fetching current file`)
+			const currentFile = this.getCurrentFile();
+			var texFile = null;
+			if (currentFile.extension == "md") {
+				new Notice(`Convert to LaTeX: Converting current file into a .tex file`)
+				const document = await this.buildDocument(currentFile);
+				new Notice(`Convert to LaTeX: ${document ? "Success" : "Encountered an Error"}`)
+				new Notice(`Convert to LaTeX: Writing file to ${this.getOutputFolderPath(document.title)}/${document.title}.tex`)
+				texFile = await this.writeDocumentToFile(document);
+				new Notice(`Convert to LaTeX: ${texFile ? "Success" : "Encountered an Error"}`)
+			} else if (currentFile.extension == "tex") {
+				texFile = currentFile;
+			} else {
+				new Notice(`Convert to LaTeX: Current file is not a .md or a .tex file`)
+				return;
+			}
+			if (!this.settings.convert_to_pdf) { return; }
+			new Notice(`Convert to LaTeX: Converting .tex file to PDF`)
+			this.convertFileToPDF(texFile)
+			new Notice(`Convert to LaTeX: Conversion to PDF completed`)
 		});
 
 		// This adds a simple command that can be triggered anywhere

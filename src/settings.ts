@@ -1,18 +1,26 @@
-import {App, Notice, PluginSettingTab, Setting} from "obsidian";
+import {App, PluginSettingTab, Setting} from "obsidian";
 import MDtoTEXPlugin from "./main";
 
 export interface MDtoTEXSettings {
+	output_folder: string;
+
 	document_class: string;
 	font_size: number;
 	paper_size: string;
 	packages: string[];
+	preamble: string;
 
 	table_of_contents: boolean;
 	number_headings: boolean;
 	used_headings: string[];
+
+	convert_to_pdf: boolean;
+	pdf_conversion_command: string;
 }
 
 export const DEFAULT_SETTINGS: MDtoTEXSettings = {
+	output_folder: "LaTeX/{FILENAME}",
+
 	document_class: "article",
 	font_size: 12,
 	paper_size: "letterpaper",
@@ -21,8 +29,24 @@ export const DEFAULT_SETTINGS: MDtoTEXSettings = {
 		"amsfonts",
 		"graphicx",
 		"cancel",
-		"ulem"
+		"ulem",
+		"color, soul",
+		"hyperref",
+		"csquotes",
+		"listings",
+		"xcolor"
 	],
+	preamble:
+		"\\lstset{\n" +
+		"    basicstyle=\\ttfamily\\small, % Monospaced font\n" +
+		"    keywordstyle=\\color{cyan},   % Keyword colors\n" +
+		"    commentstyle=\\color{gray},   % Comment colors\n" +
+		"    numbers=left,                 % Line numbers on the left\n" +
+		"    numberstyle=\\tiny\\color{gray},\n" +
+		"    frame=single,                 % Box border around the code\n" +
+		"    breaklines=true               % Wrap long lines\n" +
+		"}"
+	,
 
 	table_of_contents: false,
 	number_headings: true,
@@ -31,6 +55,9 @@ export const DEFAULT_SETTINGS: MDtoTEXSettings = {
 		"subsection",
 		"subsubsection"
 	],
+
+	convert_to_pdf: false,
+	pdf_conversion_command: "pdflatex -output-directory={OUTPUT_FOLDER_PATH} {FILE_PATH}"
 }
 
 export class MDtoTEXSettingTab extends PluginSettingTab {
@@ -45,6 +72,18 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName('Output Path')
+			.setDesc('The path to the folder where the output will be stored, from the vault root')
+			.addText(text => text
+				.setPlaceholder('Enter the output path')
+				.setValue(this.plugin.settings.output_folder)
+				.onChange(async (value) => {
+					this.plugin.settings.output_folder = value;
+					await this.plugin.saveSettings();
+				})
+			);
 
 		new Setting(containerEl).setName("Preamble").setHeading();
 
@@ -111,6 +150,18 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 				})
 			);
 
+		new Setting(containerEl)
+			.setName('Preamble')
+			.setDesc('Any additional lines to add to the preamble')
+			.addTextArea(text => text
+				.setPlaceholder('Enter lines of preamble')
+				.setValue(this.plugin.settings.preamble)
+				.onChange(async (value) => {
+					this.plugin.settings.preamble = value;
+					await this.plugin.saveSettings();
+				})
+			);
+
 		new Setting(containerEl).setName("Body").setHeading();
 
 		new Setting(containerEl)
@@ -143,6 +194,31 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.used_headings.join(",\n"))
 				.onChange(async (value) => {
 					this.plugin.settings.used_headings = value.split(",").map(s => s.trim());
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl).setName("Conversion to PDF").setHeading();
+
+		new Setting(containerEl)
+			.setName('Convert LaTeX files to PDFs')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.convert_to_pdf)
+				.onChange(async (value) => {
+					this.plugin.settings.convert_to_pdf = value;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Conversion Command')
+			.setDesc('The command to call to convert LaTeX files to PDF')
+			.addText(text => text
+				.setPlaceholder('Enter the conversion command')
+				.setValue(this.plugin.settings.pdf_conversion_command)
+				.onChange(async (value) => {
+					this.plugin.settings.pdf_conversion_command = value;
 					await this.plugin.saveSettings();
 				})
 			);
