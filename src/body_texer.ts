@@ -16,17 +16,17 @@ export class InlineModificationTexer {
 		catch (e) { return false; }
 	}
 
-	public static readonly FORMATTED_URL: InlineModificationTexer = new InlineModificationTexer(
-		/\[([^\]]*)]\(((?:https?:\/\/)?[\da-z.-]+\.[a-z.]{2,6}(?:[\/\w .-]*)*\/?)\)/,
+	public static readonly URL: InlineModificationTexer = new InlineModificationTexer(
+		/(\[[^\]]*])?\(?((?:https?:\/\/)?[\da-z.-]+\.[a-z.]{2,6}(?:[\/\w .-]*)*\/?)\)?/,
 		(match, p1, p2) => {
-		if (!InlineModificationTexer.checkURL(p2)) { return p1; }
-			return "\\href{" + p2 + "}{" + p1 + "}";
-		});
-	public static readonly RAW_URL: InlineModificationTexer = new InlineModificationTexer(
-		/[^{]((?:https?:\/\/)?[\da-z.-]+\.[a-z.]{2,6}(?:[\/\w .-]*)*\/?)[^}]/,
-		(match, p1) => {
-		if (!InlineModificationTexer.checkURL(p1)) { return p1; }
-			return "\\url{" + p1 + "}";
+			if (p1) {
+				if (!InlineModificationTexer.checkURL(p2)) { return p1; }
+				new Notice(p2)
+				new Notice("\\href{" + p2 + "}{" + p1 + "}")
+				return "\\href{" + p2 + "}{" + p1.substring(1, p1.length - 1) + "}";
+			}
+			if (!InlineModificationTexer.checkURL(p2)) { return p2; }
+			return "\\url{" + p2 + "}";
 		});
 
 	public static readonly HORIZONTAL_LINE: InlineModificationTexer = new InlineModificationTexer(/^([-_*])\1\1+$/,
@@ -58,8 +58,7 @@ export class InlineModificationTexer {
 	public static apply(lines: Line[]): Line[];
 
 	public static apply(text: string|Line|Line[], texers: InlineModificationTexer[] = [
-		InlineModificationTexer.FORMATTED_URL,
-		InlineModificationTexer.RAW_URL,
+		InlineModificationTexer.URL,
 		InlineModificationTexer.HORIZONTAL_LINE,
 		InlineModificationTexer.BOLD,
 		InlineModificationTexer.ITALIC,

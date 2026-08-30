@@ -1,0 +1,28 @@
+{
+  "output_folder": "LaTeX/{FILENAME}",
+  "document_class": "article",
+  "font_size": 12,
+  "paper_size": "letterpaper",
+  "packages": [
+    "amsmath",
+    "amsfonts",
+    "graphicx",
+    "cancel",
+    "ulem",
+    "color, soul",
+    "hyperref",
+    "csquotes",
+    "listings",
+    "xcolor"
+  ],
+  "preamble": "\\lstset{\n    basicstyle=\\ttfamily\\small, % Monospaced font\n    keywordstyle=\\color{cyan},   % Keyword colors\n    commentstyle=\\color{gray},   % Comment colors\n    numbers=left,                 % Line numbers on the left\n    numberstyle=\\tiny\\color{gray},\n    frame=single,                 % Box border around the code\n    breaklines=true               % Wrap long lines\n}",
+  "table_of_contents": false,
+  "number_headings": true,
+  "used_headings": [
+    "section",
+    "subsection",
+    "subsubsection"
+  ],
+  "convert_to_pdf": true,
+  "pdf_conversion_command": "pdflatex -output-directory={OUTPUT_FOLDER_PATH} {FILE_PATH}"
+}
