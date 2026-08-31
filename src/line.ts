@@ -5,7 +5,7 @@ export class Tag {
 	public static readonly HEADER: Tag = new Tag("HEADER");
 	public static readonly BODY: Tag = new Tag("BODY");
 	public static readonly BLOCK: Tag = new Tag("BLOCK");
-	public static readonly INDENT_BLOCK: Tag = new Tag("LINE_BLOCK");
+	public static readonly INDENT_BLOCK: Tag = new Tag("INDENT_BLOCK");
 	public static readonly TABLE: Tag = new Tag("TABLE");
 	public static readonly INLINE_MODIFICATION: Tag = new Tag("INLINE_MODIFICATION");
 

@@ -17,7 +17,7 @@
   ],
   "preamble": "\\lstset{\n    basicstyle=\\ttfamily\\small, % Monospaced font\n    keywordstyle=\\color{cyan},   % Keyword colors\n    commentstyle=\\color{gray},   % Comment colors\n    numbers=left,                 % Line numbers on the left\n    numberstyle=\\tiny\\color{gray},\n    frame=single,                 % Box border around the code\n    breaklines=true               % Wrap long lines\n}",
   "table_of_contents": false,
-  "number_headings": true,
+  "number_headings": false,
   "used_headings": [
     "section",
     "subsection",

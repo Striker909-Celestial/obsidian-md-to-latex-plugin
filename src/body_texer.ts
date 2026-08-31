@@ -32,6 +32,11 @@ export class InlineModificationTexer {
 	public static readonly HORIZONTAL_LINE: InlineModificationTexer = new InlineModificationTexer(/^([-_*])\1\1+$/,
 		() => "\\noindent\\rule{\\textwidth}{0.3pt}")
 
+	public static readonly FOOTNOTE_TEXT: InlineModificationTexer = new InlineModificationTexer(/^\[\^(\d*)]: (.*)$/,
+		(match, p1, p2) => "\\footnotetext[" + p1 + "]{" + p2 + "}")
+	public static readonly FOOTNOTE_MARK: InlineModificationTexer = new InlineModificationTexer(/\[\^(\d*)](?:[^:]|$)/,
+		(match, p1) => "\\footnotemark[" + p1 + "]{}")
+
 	public static readonly BOLD: InlineModificationTexer = new InlineModificationTexer(/(\*\*|__)([^*]*)\1/,
 		(match, p1, p2) => "\\textbf{" + InlineModificationTexer.REPLACE_SPECIAL_CHARS.apply(p2) + "}");
 	public static readonly ITALIC: InlineModificationTexer = new InlineModificationTexer(/\*([^*]*)\*/,
@@ -60,6 +65,8 @@ export class InlineModificationTexer {
 	public static apply(text: string|Line|Line[], texers: InlineModificationTexer[] = [
 		InlineModificationTexer.URL,
 		InlineModificationTexer.HORIZONTAL_LINE,
+		InlineModificationTexer.FOOTNOTE_TEXT,
+		InlineModificationTexer.FOOTNOTE_MARK,
 		InlineModificationTexer.BOLD,
 		InlineModificationTexer.ITALIC,
 		InlineModificationTexer.STRIKETHROUGH,
@@ -118,8 +125,6 @@ export class IndentedBlockTexer {
 		if (!match) { return line; }
 		const indent = this.indentFunc(match);
 		const tag = Tag.indentBlock(indent, this.keyword)
-		// Store the raw indent width in the tag; it is normalized to a nesting
-		// level (and re-indented) in the array pass of the static apply().
 		line.conditionalModification(tag, (text) => text.replace(this.regex, this.replaceFunc));
 		return line;
 	}
@@ -149,7 +154,7 @@ export class IndentedBlockTexer {
 			// 4-space indents) collapse to consecutive 0-based levels.
 			var indentStack: number[] = [];
 			// Close environments until only `need` remain open.
-			const close = (need: number) => {
+			const closeTo = (need: number) => {
 				for (; open > need; open--) {
 					output.push(new Line("\t".repeat(open - 1) + "\\end{" + currentKeyword + "}", [Tag.INDENT_BLOCK]));
 				}
@@ -163,11 +168,11 @@ export class IndentedBlockTexer {
 			}
 			const go = (need: number) => {
 				if (open < need) { openTo(need); }
-				else if (open > need) { close(need); }
+				else if (open > need) { closeTo(need); }
 			}
 			// Reset all block state (used when a list ends or the block type changes).
 			const reset = () => {
-				close(0);
+				closeTo(0);
 				indentStack = [];
 			}
 			// Normalize a raw indent width to a 0-based nesting level via the stack.
@@ -336,9 +341,9 @@ export function tag_headers(lines: Line[], header_regex: RegExp = /(#{1,6}) (.*)
 }
 
 export function body_texer(body: Line[], texer_funcs: ((lines: Line[]) => Line[])[] = [
-	TableTexer.apply,
-	BlockTexer.apply,
 	tag_headers,
+	BlockTexer.apply,
+	TableTexer.apply,
 	IndentedBlockTexer.apply,
 	InlineModificationTexer.apply
 ]): Line[] {
