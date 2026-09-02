@@ -1,8 +1,8 @@
 {
 	"id": "md-to-latex",
 	"name": "Convert to LaTeX",
-	"version": "1.0.7",
-	"minAppVersion": "1.5.7",
+	"version": "1.0.8",
+	"minAppVersion": "1.6.6",
 	"description": "Adds the ability to convert .md files to .tex files and PDFs to produce simple LaTeX documents.",
 	"author": "Striker-909",
 	"authorUrl": "https://github.com/Striker909-Celestial",
