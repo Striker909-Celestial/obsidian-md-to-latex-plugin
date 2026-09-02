@@ -5,9 +5,9 @@ import {Notice} from "obsidian";
 
 export class Document {
 	
-	private preamble_list: string[] = ["% Preamble"];
-	private title_list: string[] = ["% Title"]
-	private body_lines: Line[] = [new Line("% Body"), new Line("\\begin{document}"), new Line("\\maketitle")];
+	private preamble_list: string[] = [];
+	private title_list: string[] = []
+	private body_lines: Line[] = [new Line("\\begin{document}"), new Line("\\maketitle")];
 	public latex_text: string = "";
 	
 	public constructor(
@@ -31,12 +31,23 @@ export class Document {
 	 * */
 	private makePreamble(): string[] {
 		this.preamble_list.push(`\\documentclass[${this.settings.paper_size}, ${this.settings.font_size}pt]{${this.settings.document_class}}`);
-		this.preamble_list.push("");
-		for (const pkg of this.settings.packages) {
-			this.preamble_list.push(`\\usepackage{${pkg}}`);
-		}
-		this.preamble_list.push("");
+
+		this.preamble_list.push("", "% ======= PACKAGES ======= %", "");
+
+		const packages: string[] = [];
+		packages.push(...this.settings.packages);
+		if (this.properties.has("Packages")) packages.push(...this.properties.get("Packages"))
+		for (const pkg of packages) { this.preamble_list.push(`\\usepackage{${pkg}}`); }
+		this.preamble_list.push("", "% ======= PREAMBLE ======= %", "");
+
+		const graphic_paths: string[] = [];
+		graphic_paths.push(...this.settings.graphics_paths)
+		if (this.properties.has("Graphics Paths")) graphic_paths.push(...this.properties.get("Graphics Paths"))
+		if (graphic_paths.length > 0) this.preamble_list.push("\\graphicspath{ {" + graphic_paths.join("}{") + "} }");
+
 		this.preamble_list.push(this.settings.preamble)
+		if (this.properties.has("Preamble")) this.preamble_list.push(...this.properties.get("Preamble"))
+
 		return this.preamble_list;
 	}
 
@@ -45,14 +56,16 @@ export class Document {
 	 * @return The title section as an array of lines
 	 * */
 	private makeTitle(): string[] {
+		this.preamble_list.push("", "% ========= TITLE ========== %");
 		this.title_list.push(`\\title{${this.title}}`);
 		if (this.properties.has("Author")) this.title_list.push(`\\author{${this.properties.get("Author")}}`);
 		if (this.properties.has("Date")) this.title_list.push(`\\date{${this.properties.get("Date")}}`);
+		this.title_list.push("", "% ========= BODY ========= %", "");
 		return this.title_list;
 	}
 
 	private splitBody(): Line[] {
-		if (this.settings.table_of_contents) this.body_lines.push(new Line("\\tableofcontents"));
+		if (this.settings.table_of_contents || this.properties.get("Contents")) this.body_lines.push(new Line("\\tableofcontents"));
 		const lines: string[] = this.body.split("\n");
 		for (const line of lines) {
 			this.body_lines.push(new Line(line));

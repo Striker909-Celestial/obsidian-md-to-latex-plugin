@@ -19,6 +19,7 @@ export class InlineModificationTexer {
 	public static readonly WIKILINK: InlineModificationTexer = new InlineModificationTexer(
 		/(?:^|[^!])\[\[([^#|\]]+)(?:#([^|\]]+))?(?:\|([^\]]+))?]]/,
 		(match, link, section, display) => {
+			new Notice(match)
 			if (InlineModificationTexer.checkURL(link)) {
 				if (display) return "\\href{" + link + "}{" + display + "}";
 				return "\\url{" + link + "}";
@@ -29,12 +30,16 @@ export class InlineModificationTexer {
 		}
 	)
 
+	public static readonly GRAPHIC: InlineModificationTexer = new InlineModificationTexer(
+		/!\[\[([^.]+)(?:\.[^.]{2,6})?]]/,
+		(match, p1) =>  "\\includegraphics{" + p1 + "}"
+	)
+
 	public static readonly URL: InlineModificationTexer = new InlineModificationTexer(
 		/(?:^|[^{])(\[[^\]]*])?\(?((?:https?:\/\/)?[\da-z.-]+\.[a-z.]{2,6}(?:[\/\w .-]*)*\/?)\)?(?:$|[^}])/,
 		(match, p1, p2) => {
 			if (p1) {
 				if (!InlineModificationTexer.checkURL(p2)) { return p1; }
-				new Notice(p2)
 				new Notice("\\href{" + p2 + "}{" + p1 + "}")
 				return "\\href{" + p2 + "}{" + p1.substring(1, p1.length - 1) + "}";
 			}
@@ -77,6 +82,7 @@ export class InlineModificationTexer {
 
 	public static apply(text: string|Line|Line[], texers: InlineModificationTexer[] = [
 		InlineModificationTexer.WIKILINK,
+		InlineModificationTexer.GRAPHIC,
 		InlineModificationTexer.URL,
 		InlineModificationTexer.HORIZONTAL_LINE,
 		InlineModificationTexer.FOOTNOTE_TEXT,

@@ -8,6 +8,7 @@ export interface MDtoTEXSettings {
 	font_size: number;
 	paper_size: string;
 	packages: string[];
+	graphics_paths: string[];
 	preamble: string;
 
 	table_of_contents: boolean;
@@ -36,6 +37,7 @@ export const DEFAULT_SETTINGS: MDtoTEXSettings = {
 		"listings",
 		"xcolor"
 	],
+	graphics_paths: [],
 	preamble:
 		"\\lstset{\n" +
 		"    basicstyle=\\ttfamily\\small, % Monospaced font\n" +
@@ -146,6 +148,18 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.packages.join(",\n"))
 				.onChange(async (value) => {
 					this.plugin.settings.packages = value.split(",").map(s => s.trim());
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Graphics Paths')
+			.setDesc('Paths to folders containing images to be used in LaTeX documents.')
+			.addTextArea(text => text
+				.setPlaceholder('Enter graphics paths, separated by commas')
+				.setValue(this.plugin.settings.graphics_paths.join(",\n"))
+				.onChange(async (value) => {
+					this.plugin.settings.graphics_paths = value.split(",").map(s => s.trim());
 					await this.plugin.saveSettings();
 				})
 			);
