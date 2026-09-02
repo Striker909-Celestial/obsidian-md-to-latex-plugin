@@ -91,7 +91,6 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Document class')
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			.setDesc('Class of document to generate')
 			.addDropdown((dropdown) =>
 				dropdown
@@ -126,7 +125,6 @@ export class MDtoTEXSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Paper size')
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			.setDesc('Size of the paper')
 			.addDropdown((dropdown) =>
 				dropdown

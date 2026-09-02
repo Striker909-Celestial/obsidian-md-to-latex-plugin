@@ -98,8 +98,8 @@ export class InlineModificationTexer {
 			return text;
 		}
 		if (text instanceof Array) {
-			for (var i = 0; i < text.length; i++) {
-				text[i] = InlineModificationTexer.apply(text.at(i)!, texers);
+			for (let i = 0; i < text.length; i++) {
+				text[i] = InlineModificationTexer.apply(text[i]!, texers);
 			}
 			return text;
 		}
@@ -167,12 +167,12 @@ export class IndentedBlockTexer {
 		}
 		if (line instanceof Array) {
 			const output: Line[] = [];
-			var open = 0;                 // number of block environments currently open
-			var currentKeyword = "";
+			let open = 0;                 // number of block environments currently open
+			let currentKeyword = "";
 			// Raw indent widths for each currently-open level. Its length is the
 			// normalized nesting depth, so arbitrary raw widths (tabs, 2- or
 			// 4-space indents) collapse to consecutive 0-based levels.
-			var indentStack: number[] = [];
+			let indentStack: number[] = [];
 			// Close environments until only `need` remain open.
 			const closeTo = (need: number) => {
 				for (; open > need; open--) {
@@ -205,7 +205,7 @@ export class IndentedBlockTexer {
 				}
 				return indentStack.length - 1;
 			}
-			for (var i = 0; i < line.length; i++) {
+			for (let i = 0; i < line.length; i++) {
 				const currentLine = IndentedBlockTexer.apply(line[i]!, texers);
 				if (!currentLine.tags.contains(Tag.INDENT_BLOCK)) {
 					reset();
@@ -239,9 +239,9 @@ export class TableTexer {
 
 	private static row_regex = /^(?:\|([^|]+))+\|$/;
 	private static row_replace = (match: string) => {
-		var out = "";
+		let out = "";
 		const groups = match.split("|")
-		for (var i = 1; i < groups.length - 1; i++) {
+		for (let i = 1; i < groups.length - 1; i++) {
 			if (i > 1) out += " & ";
 			 out += groups[i];
 		}
@@ -254,14 +254,14 @@ export class TableTexer {
 	private constructor() {}
 
 	public static apply(lines: Line[]): Line[] {
-		var out: Line[] = [];
-		var table: boolean = false;
-		var table_begin = -1;
-		var alignments: string[] = []
-		var alignmentReplace = (match: string) => {
+		let out: Line[] = [];
+		let table: boolean = false;
+		let table_begin = -1;
+		let alignments: string[] = []
+		let alignmentReplace = (match: string) => {
 			if (alignments.length > 0) { return "\\hline"; }
 			const groups = match.split("|")
-			for (var i = 1; i < groups.length - 1; i++) {
+			for (let i = 1; i < groups.length - 1; i++) {
 				if (TableTexer.center_align_regex.test(groups[i]!)) { alignments.push("c"); }
 				else if (TableTexer.right_align_regex.test(groups[i]!)) { alignments.push("r"); }
 				else { alignments.push("l"); }
@@ -326,10 +326,10 @@ export class BlockTexer {
 	) {}
 
 	public static apply(lines: Line[], texers: BlockTexer[] = [BlockTexer.MATH, BlockTexer.CODE]): Line[] {
-		var currentTexer: number = -1;
-		for (var i = 0; i < lines.length; i++) {
+		let currentTexer: number = -1;
+		for (let i = 0; i < lines.length; i++) {
 			if (currentTexer == -1) {
-				for (var j = 0; j < texers.length; j++) {
+				for (let j = 0; j < texers.length; j++) {
 					if (texers[j]!.startRegex.test(lines[i]!.getText())) {
 						const texer = texers[j]!;
 						lines[i]!.conditionalModification(Tag.BLOCK, (text) => text.replace(texer.startRegex, texer.startReplace))
@@ -350,7 +350,7 @@ export class BlockTexer {
 }
 
 export function tag_headers(lines: Line[], header_regex: RegExp = /(#{1,6}) (.*)/): Line[] {
-	for (var i = 0; i < lines.length; i++) {
+	for (let i = 0; i < lines.length; i++) {
 		const match = header_regex.exec(lines[i]!.getText())
 		if (match) {
 			const tag = Tag.header(match[1]!.length);

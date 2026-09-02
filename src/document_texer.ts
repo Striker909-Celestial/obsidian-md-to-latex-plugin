@@ -1,7 +1,6 @@
 import {MDtoTEXSettings} from "./settings";
 import {Line, Tag} from "./line";
 import {body_texer} from "./body_texer";
-import {Notice} from "obsidian";
 
 export class Document {
 	

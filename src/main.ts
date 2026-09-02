@@ -1,4 +1,4 @@
-import {FileSystemAdapter, getFrontMatterInfo, Notice, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
+import {FileSystemAdapter, getFrontMatterInfo, Notice, Plugin, TAbstractFile, TFile} from 'obsidian';
 import {DEFAULT_SETTINGS, MDtoTEXSettings, MDtoTEXSettingTab} from "./settings";
 import {Document} from "./document_texer"
 import {execSync} from "node:child_process";
@@ -54,7 +54,7 @@ export default class MDtoTEXPlugin extends Plugin {
 		} catch (e) {
 			const tex = this.app.vault.getAbstractFileByPath(outputFolderPath + "/" + document.title + ".tex");
 			if (tex instanceof TAbstractFile) {
-				await this.app.vault.delete(tex)
+				await this.app.fileManager.trashFile(tex)
 			}
 		}
 		try {
@@ -66,7 +66,7 @@ export default class MDtoTEXPlugin extends Plugin {
 	}
 
 	private getPDFConversionCommand(file: TFile): string {
-		var root = "";
+		let root = "";
 		const adapter = this.app.vault.adapter;
 		if (adapter instanceof FileSystemAdapter) {
 			root = adapter.getBasePath();
@@ -93,10 +93,9 @@ export default class MDtoTEXPlugin extends Plugin {
 		// This creates an icon in the left ribbon.
 		this.addRibbonIcon('pdf-file', 'Convert to LaTeX', async (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			new Notice(`Convert to LaTeX: Fetching current file`)
 			const currentFile = this.getCurrentFile();
-			var texFile = null;
+			let texFile = null;
 			if (currentFile.extension == "md") {
 				new Notice(`Convert to LaTeX: Converting current file into a .tex file`)
 				const document = await this.buildDocument(currentFile);
@@ -153,7 +152,7 @@ export default class MDtoTEXPlugin extends Plugin {
 			}
 		});*/
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
+		// This adds a settings tab so the user can configure letious aspects of the plugin
 		this.addSettingTab(new MDtoTEXSettingTab(this.app, this));
 
 	}
