@@ -304,6 +304,11 @@ export class TableTexer {
 
 export class BlockTexer {
 
+	public static readonly RAW_LATEX: BlockTexer = new BlockTexer(
+		/^%%[^%]*%%$/, () => "%% ======= RAW LATEX ====== %%",
+		/^%%[^%]*%%$/, () =>  "%% ======================== %%"
+	)
+
 	public static readonly MATH: BlockTexer = new BlockTexer(
 		/^\$\$$/, () => "$$",
 		/^\$\$$/, () => "$$"
